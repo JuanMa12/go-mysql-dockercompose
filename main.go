@@ -22,6 +22,7 @@ func main() {
   defer db.Close()
 
   router := gin.Default()
+
   router.LoadHTMLGlob("templates/*.html")
 
   router.GET("/", func(ctx *gin.Context){
@@ -61,7 +62,7 @@ func main() {
     ctx.Redirect(302, "/")
   })
 
-  router.Run()
+  router.Run(":3000")
 }
 
 func sqlConnect() (database *gorm.DB) {
