@@ -1,0 +1,3 @@
+- docker compose build
+- docker compose run --rm app air init
+- docker compose up -d
