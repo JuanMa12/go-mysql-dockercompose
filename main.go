@@ -25,44 +25,66 @@ func main() {
 
   router.LoadHTMLGlob("templates/*.html")
 
-  router.GET("/", func(ctx *gin.Context){
-    db := sqlConnect()
-    var users []User
-    db.Order("created_at asc").Find(&users)
-    defer db.Close()
+  router.GET("/", listUsers)
+  router.POST("/", createUser)
+  router.POST("/delete/:id", deleteUser)
 
-    ctx.HTML(200, "index.html", gin.H{
-      "users": users,
-    })
-  })
-
-  router.POST("/new", func(ctx *gin.Context) {
-    db := sqlConnect()
-    name := ctx.PostForm("name")
-    email := ctx.PostForm("email")
-    fmt.Println("create user " + name + " with email " + email)
-    db.Create(&User{Name: name, Email: email})
-    defer db.Close()
-
-    ctx.Redirect(302, "/")
-  })
-
-  router.POST("/delete/:id", func(ctx *gin.Context) {
-    db := sqlConnect()
-    n := ctx.Param("id")
-    id, err := strconv.Atoi(n)
-    if err != nil {
-      panic("id is not a number")
-    }
-    var user User
-    db.First(&user, id)
-    db.Delete(&user)
-    defer db.Close()
-
-    ctx.Redirect(302, "/")
-  })
+  api := router.Group("api")
+	{
+    api.GET("/", apiListUsers)
+    //api.POST("/new", apiCreateUser)
+    //api.POST("/read", apiDeleteUser)
+	}
 
   router.Run(":3000")
+}
+
+func apiListUsers(ctx *gin.Context) {
+  db := sqlConnect()
+  var users []User
+  db.Order("created_at asc").Find(&users)
+  defer db.Close()
+
+  ctx.JSON(200, gin.H{
+    "users": users,
+  })
+}
+
+func listUsers(ctx *gin.Context) {
+  db := sqlConnect()
+  var users []User
+  db.Order("created_at asc").Find(&users)
+  defer db.Close()
+
+  ctx.HTML(200, "index.html", gin.H{
+    "users": users,
+  })
+}
+
+func createUser(ctx *gin.Context) {
+  db := sqlConnect()
+  name := ctx.PostForm("name")
+  email := ctx.PostForm("email")
+  fmt.Println("create user " + name + " with email " + email)
+  db.Create(&User{Name: name, Email: email})
+  defer db.Close()
+
+  ctx.Redirect(302, "/")
+}
+
+func deleteUser(ctx *gin.Context) {
+  db := sqlConnect()
+  n := ctx.Param("id")
+  id, err := strconv.Atoi(n)
+  if err != nil {
+    panic("id is not a number")
+  }
+  var user User
+  db.First(&user, id)
+  db.Delete(&user)
+  defer db.Close()
+
+  ctx.Redirect(302, "/")
 }
 
 func sqlConnect() (database *gorm.DB) {
