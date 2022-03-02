@@ -22,6 +22,10 @@
               <label for="">Mail</label>
               <input type="text" name="email" size="30" placeholder="--" class="form-control">
             </div>
+            <div class="form-group">
+              <label for="">Password</label>
+              <input type="password" name="password" placeholder="--" class="form-control">
+            </div>
             <p><input type="submit" value="Send" class="btn btn-primary"></p>
           </form>
         </div>
@@ -34,6 +38,8 @@
               <tr>
                 <th>Name</th>
                 <th>Mail</th>
+                <th>Password</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -41,6 +47,7 @@
                 <tr>
                   <td>{{ .Name }}</td>
                   <td>{{ .Email }}</td>
+                  <td>{{ .Password }}</td>
                   <td>
                     <form method="post" action="/delete/{{.ID}}">
                       <button type="submit" class="btn btn-sm btn-danger">Delete</button>
