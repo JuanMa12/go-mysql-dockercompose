@@ -8,6 +8,9 @@ import (
   "github.com/gin-gonic/gin"
   "github.com/jinzhu/gorm"
   _ "github.com/go-sql-driver/mysql"
+
+  "github.com/dgrijalva/jwt-go"
+  "os"
 )
 
 type User struct {
@@ -18,6 +21,7 @@ type User struct {
 }
 
 type Body struct{
+  ID uint64 `json:"id"`
   Email string `json:"email"`
   Password string `json:"password"`
 }
@@ -51,7 +55,6 @@ func Login(c *gin.Context) {
   db := sqlConnect()
   var findUser User
   body := Body{}
-
   if err := c.ShouldBindJSON(&body); err != nil {
      c.JSON(402, "Invalid json provided")
      return
@@ -65,19 +68,19 @@ func Login(c *gin.Context) {
     panic("User dont exists")
   }
   defer db.Close()
-  //c.JSON(401, gin.H{"body":body, "findUser":findUser})
+  c.JSON(401, gin.H{"body":body, "findUser":findUser})
   //compare the user from the request, with the one we defined:
   if body.Email != findUser.Email || body.Password != findUser.Password {
      c.JSON(401, "Please provide valid login details")
      return
   }
-  c.JSON(200, "Information success")
-  /*token, err := CreateToken(user.ID)
+  //c.JSON(200, "Information success")
+  token, err := CreateToken(findUser.Email)
   if err != nil {
      c.JSON(402, err.Error())
      return
   }
-  c.JSON(200, token)*/
+  c.JSON(200, gin.H{"token":token})
 }
 
 func apiListUsers(ctx *gin.Context){
@@ -200,4 +203,20 @@ func sqlConnect() (database *gorm.DB) {
   }
 
   return db
+}
+
+func CreateToken(useremail string) (string, error) {
+  var err error
+  //Creating Access Token
+  os.Setenv("ACCESS_SECRET", "MYSECRECT_KEY") //this should be in an env file
+  atClaims := jwt.MapClaims{}
+  atClaims["authorized"] = true
+  atClaims["user_email"] = useremail
+  atClaims["exp"] = time.Now().Add(time.Minute * 15).Unix()
+  at := jwt.NewWithClaims(jwt.SigningMethodHS256, atClaims)
+  token, err := at.SignedString([]byte(os.Getenv("ACCESS_SECRET")))
+  if err != nil {
+     return "", err
+  }
+  return token, nil
 }

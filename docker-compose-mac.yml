@@ -1,0 +1,35 @@
+version: '3.9'
+services:
+  app:
+    build:
+      dockerfile: DockerFile
+      context: .
+      target: dev
+    volumes:
+      - .:/opt/app/api
+    environment:
+      API_SERVER_ADDR: ":3003"
+    ports:
+    - "3003:3003"
+    depends_on:
+      - "db"
+
+  db:
+    platform: linux/amd64
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: go_database
+      MYSQL_USER: go_test
+      MYSQL_PASSWORD: password
+      TZ: 'Amercia/Bogota'
+    command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - db-data:/var/lib/mysql
+      - ./db/my.cnf:/etc/mysql/conf.d/my.cnf
+    ports:
+      - 3306:3306
+
+volumes:
+  db-data:
+    driver: local
