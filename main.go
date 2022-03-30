@@ -9,8 +9,10 @@ import (
   "github.com/jinzhu/gorm"
   _ "github.com/go-sql-driver/mysql"
 
+  "net/http"
   "github.com/dgrijalva/jwt-go"
   "os"
+  "strings"
 )
 
 type User struct {
@@ -24,6 +26,11 @@ type Body struct{
   ID uint64 `json:"id"`
   Email string `json:"email"`
   Password string `json:"password"`
+}
+
+type AccessDetails struct {
+  AccessUuid string
+  UserId   uint64
 }
 
 func main() {
@@ -41,7 +48,7 @@ func main() {
 
   api := router.Group("/api")
 	{
-		api.GET("/", apiListUsers)
+		api.GET("/", TokenAuthMiddleware(), apiListUsers)
 		api.POST("/new", apiCreateUser)
 		api.POST("/delete/:id", apiDeleteUser)
 
@@ -205,6 +212,9 @@ func sqlConnect() (database *gorm.DB) {
   return db
 }
 
+
+// ### methods JWT
+
 func CreateToken(useremail string) (string, error) {
   var err error
   //Creating Access Token
@@ -219,4 +229,53 @@ func CreateToken(useremail string) (string, error) {
      return "", err
   }
   return token, nil
+}
+
+func TokenAuthMiddleware() gin.HandlerFunc {
+  return func(c *gin.Context) {
+     err := TokenValid(c.Request)
+     if err != nil {
+        c.JSON(http.StatusUnauthorized, err.Error())
+        c.Abort()
+        return
+     }
+     c.Next()
+  }
+}
+
+func TokenValid(r *http.Request) error {
+  token, err := VerifyToken(r)
+  if err != nil {
+     return err
+  }
+  if _, ok := token.Claims.(jwt.Claims); !ok && !token.Valid {
+     return err
+  }
+  return nil
+}
+
+func VerifyToken(r *http.Request) (*jwt.Token, error) {
+  tokenString := ExtractToken(r)
+  token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+     //Make sure that the token method conform to "SigningMethodHMAC"
+     if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+        return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+     }
+     return []byte(os.Getenv("ACCESS_SECRET")), nil
+  })
+  if err != nil {
+     return nil, err
+  }
+  return token, nil
+}
+
+func ExtractToken(r *http.Request) string {
+  bearToken := r.Header.Get("Authorization")
+  //panic(bearToken)
+  //normally Authorization the_token_xxx
+  strArr := strings.Split(bearToken, " ")
+  if len(strArr) == 2 {
+     return strArr[1]
+  }
+  return ""
 }
